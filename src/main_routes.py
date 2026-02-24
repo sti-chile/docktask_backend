@@ -55,12 +55,22 @@ def api_crear_mensaje():
     if not data or not data.get("nombre") or not data.get("mensaje"):
         return jsonify({"error": "Faltan campos requeridos"}), 400
 
+    start_date = None
+    if data.get("start_date"):
+        try:
+            start_date = datetime.fromisoformat(data["start_date"])
+        except ValueError:
+            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
+
     expiration_date = None
     if data.get("expiration_date"):
         try:
             expiration_date = datetime.fromisoformat(data["expiration_date"])
         except ValueError:
-            return jsonify({"error": "Formato de fecha inválido. Usa ISO 8601."}), 400
+            return jsonify({"error": "Formato de expiration_date inválido. Usa ISO 8601."}), 400
+
+    if start_date and expiration_date and start_date > expiration_date:
+        return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
 
     nuevo = Mensaje(
         nombre=data["nombre"],
@@ -68,6 +78,7 @@ def api_crear_mensaje():
         usuario_id=int(user_id),
         estado=data.get("estado", "pendiente"),
         proyecto_id=data.get("proyecto_id"),
+        start_date=start_date,
         expiration_date=expiration_date
     )
     if not nuevo.proyecto_id:
@@ -83,6 +94,7 @@ def api_crear_mensaje():
             "nombre": nuevo.nombre,
             "mensaje": nuevo.mensaje,
             "estado": nuevo.estado,
+            "start_date": nuevo.start_date.isoformat() if nuevo.start_date else None,
             "expiration_date": nuevo.expiration_date.isoformat() if nuevo.expiration_date else None
         },
         "autor": user_id
@@ -143,6 +155,7 @@ def mis_mensajes():
          "created_at": m.created_at, 
          "updated_at": m.updated_at,
          "estado": m.estado,
+         "start_date": m.start_date.isoformat() if m.start_date else None,
          "expiration_date": m.expiration_date.isoformat() if m.expiration_date else None
          }
         for m in mensajes
@@ -162,11 +175,19 @@ def actualizar_mensaje(id):
 
     if "estado" in data:
         mensaje.estado = data["estado"]
+    if "start_date" in data:
+        try:
+            mensaje.start_date = datetime.fromisoformat(data["start_date"]) if data["start_date"] else None
+        except Exception as e:
+            return jsonify({"error": f"Formato de start_date inválido: {str(e)}"}), 400
     if "expiration_date" in data:
         try:
-            mensaje.expiration_date = datetime.fromisoformat(data["expiration_date"])
+            mensaje.expiration_date = datetime.fromisoformat(data["expiration_date"]) if data["expiration_date"] else None
         except Exception as e:
-            return jsonify({"error": f"Formato de fecha inválido: {str(e)}"}), 400
+            return jsonify({"error": f"Formato de expiration_date inválido: {str(e)}"}), 400
+    # Validar que start_date <= expiration_date
+    if mensaje.start_date and mensaje.expiration_date and mensaje.start_date > mensaje.expiration_date:
+        return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
     mensaje.updated_at = datetime.utcnow()
     mensaje.mensaje = data.get("mensaje", mensaje.mensaje)
     db.session.commit()
@@ -204,6 +225,7 @@ def duplicar_mensaje(id):
         usuario_id=mensaje.usuario_id,
         proyecto_id=mensaje.proyecto_id,
         estado=mensaje.estado,
+        start_date=mensaje.start_date,
         expiration_date=mensaje.expiration_date
     )
     db.session.add(nuevo)
