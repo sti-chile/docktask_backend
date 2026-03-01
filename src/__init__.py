@@ -32,8 +32,10 @@ def create_app():
     from .main_routes import main
     from .admin_routes import admin
     from .project_routes import project
+    from .workspace_routes import workspace
     app.register_blueprint(main)
     app.register_blueprint(admin, url_prefix='/admin')
     app.register_blueprint(project, url_prefix='/api')
+    app.register_blueprint(workspace)
 
     return app
