@@ -3,16 +3,16 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import Proyecto, Mensaje, Usuario, db
-from datetime import datetime
+from datetime import datetime, timezone
 project = Blueprint("project", __name__, url_prefix="/api")
 
 # ---------- helpers ----------
 def is_admin(uid):
-    u = Usuario.query.get(uid)
+    u = db.session.get(Usuario, uid)
     return u and u.rol == "admin"
 
 def owner_to_username(uid):
-    u = Usuario.query.get(uid)
+    u = db.session.get(Usuario, uid)
     return u.username if u else ""
 
 def proyecto_to_dict(proyecto):
@@ -22,9 +22,9 @@ def proyecto_to_dict(proyecto):
         "owner_id": proyecto.owner_id,
         "username": owner_to_username(proyecto.owner_id),
         "descripcion": proyecto.descripcion,
-        "created_at": proyecto.created_at,
-        "updated_at": proyecto.updated_at,
-        "end_date": proyecto.end_date,
+        "created_at": proyecto.created_at.astimezone(timezone.utc).isoformat(),
+        "updated_at": proyecto.updated_at.astimezone(timezone.utc).isoformat(),
+        "end_date": proyecto.end_date.astimezone(timezone.utc).isoformat() if proyecto.end_date else None,
         "estado": proyecto.estado
     }
 
@@ -33,7 +33,7 @@ def proyecto_to_dict(proyecto):
 @project.route("/proyectos", methods=["GET"])
 @jwt_required()
 def get_proyectos():
-    proyectos = Proyecto.query.all()
+    proyectos = db.session.query(Proyecto).all()
     return jsonify([proyecto_to_dict(p) for p in proyectos]), 200
 
 # -----------------ENDPOINT POST PROYECTOS-----------------
@@ -56,8 +56,8 @@ def create_proyecto():
         nombre=data["nombre"],
         descripcion=data["descripcion"],
         owner_id=get_jwt_identity(),
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
         end_date=end_date
     )
     db.session.add(nuevo)
@@ -69,14 +69,14 @@ def create_proyecto():
 @jwt_required()
 def update_proyecto(proyecto_id):
     data = request.json
-    proyecto = Proyecto.query.get(proyecto_id)
+    proyecto = db.session.get(Proyecto, proyecto_id)
     if not proyecto:
         return jsonify({"error": "Proyecto no encontrado"}), 404
     
     proyecto.nombre = data.get("nombre", proyecto.nombre)
     proyecto.descripcion = data.get("descripcion", proyecto.descripcion)
     proyecto.end_date = data.get("end_date", proyecto.end_date)
-    proyecto.updated_at = datetime.utcnow()
+    proyecto.updated_at = datetime.now(timezone.utc)
     db.session.commit()
     return jsonify({"message": "Proyecto actualizado exitosamente"}), 200
 
@@ -84,7 +84,7 @@ def update_proyecto(proyecto_id):
 @project.route("/proyectos/<int:proyecto_id>", methods=["DELETE"])
 @jwt_required()
 def delete_proyecto(proyecto_id):
-    proyecto = Proyecto.query.get(proyecto_id)
+    proyecto = db.session.get(Proyecto, proyecto_id)
     if not proyecto:
         return jsonify({"error": "Proyecto no encontrado"}), 404
     
@@ -97,7 +97,7 @@ def delete_proyecto(proyecto_id):
 @project.route("/proyectos/<int:pid>/mensajes", methods=["GET"])
 @jwt_required()
 def mensajes_de_proyecto(pid):
-    p = Proyecto.query.get_or_404(pid)
+    p = db.session.get(Proyecto, pid)
     return jsonify([
         {
             "id": m.id,
@@ -114,7 +114,7 @@ def mensajes_de_proyecto(pid):
 @project.route("/proyectos/<int:pid>/mensajes", methods=["POST"])
 @jwt_required()
 def crear_mensaje(pid):
-    p = Proyecto.query.get_or_404(pid)
+    p = db.session.get(Proyecto, pid)
     data = request.json
     if not data or not data.get("mensaje") or not data.get("nombre"):
         return jsonify({"error": "Faltan campos requeridos (nombre y mensaje son obligatorios)"}), 400

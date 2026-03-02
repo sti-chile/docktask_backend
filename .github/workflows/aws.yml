@@ -8,7 +8,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
   EC2_HOST: ${{ secrets.EC2_HOST }}
 
 jobs:
@@ -29,11 +29,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          
+      - name: Show workspace structure
+        run: |
+          pwd
+          ls -l
+      - name: List subfolders
+        run: ls -l ${{ github.workspace }}
 
       # tests
       - name: Run backend tests
         run: |
-          pytest tests/
+          echo "PYTHONPATH=."
+          PYTHONPATH=. pytest tests/
 
       - name: Setup SSH Key
         uses: webfactory/ssh-agent@v0.7.0
@@ -44,15 +52,20 @@ jobs:
       # - name: Upload .env to EC2
       #   run: |
       #     scp -o StrictHostKeyChecking=no src/.env.example ${{ secrets.EC2_HOST }}:/ruta/a/tu/app/.env
-
+      #  ok
+      
       - name: Deploy to EC2 via SSH
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_HOST }} << 'EOF'
             cd /home/ubuntu/docktask  #ruta
+            echo "FLASK_APP=src/manage.py" > .env
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+            echo "REDIS_HOST=redis" >> .env
+            echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
             git pull origin main
             docker compose down || true
             docker compose up -d --build
-            docker compose exec web flask db upgrade
+            docker compose exec web flask --app src/manage.py db upgrade
           EOF
 
       # Notificación opcional (Slack, Discord, etc) aquí si lo deseas

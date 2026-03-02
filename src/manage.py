@@ -1,6 +1,5 @@
 from flask.cli import FlaskGroup
-from flask_cors import CORS
-from src import create_app, db
+from src import create_app
 
 app = create_app()
 cli = FlaskGroup(app)

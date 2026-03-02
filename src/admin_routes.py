@@ -3,12 +3,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import Usuario
 from . import db
-from datetime import datetime
+from datetime import datetime, timezone
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
 # Helper para verificar si el usuario es admin
 def is_admin(user_id):
-    user = Usuario.query.get(user_id)
+    user = db.session.get(Usuario, user_id)
     return user and user.rol == "admin"
 
 # Obtener todos los usuarios
@@ -19,7 +19,7 @@ def obtener_usuarios():
     if not is_admin(user_id):
         return jsonify({"error": "Acceso denegado"}), 403
 
-    usuarios = Usuario.query.all()
+    usuarios = db.session.query(Usuario).all()
     data = [
         {"id": u.id, "username": u.username, "rol": u.rol}
         for u in usuarios
@@ -34,8 +34,8 @@ def actualizar_usuario(id):
     if not is_admin(user_id):
         return jsonify({"error": "Acceso denegado"}), 403
 
-    user = Usuario.query.get(id)
-    if not user:
+    user = db.session.get(Usuario, id)
+    if not user:            
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     data = request.get_json()
@@ -54,7 +54,7 @@ def eliminar_usuario(id):
     if not is_admin(user_id):
         return jsonify({"error": "Acceso denegado"}), 403
 
-    user = Usuario.query.get(id)
+    user = db.session.get(Usuario, id)
     if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
@@ -76,8 +76,8 @@ def añadir_usuario():
         rol=data.get("rol"),
         nombre=data.get("nombre"),
         apellido=data.get("apellido"),
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
     )
     db.session.add(user)
     db.session.commit()
