@@ -178,13 +178,13 @@ def actualizar_mensaje(id):
     if "start_date" in data:
         try:
             mensaje.start_date = datetime.fromisoformat(data["start_date"]) if data["start_date"] else None
-        except Exception as e:
-            return jsonify({"error": f"Formato de start_date inválido: {str(e)}"}), 400
+        except ValueError:
+            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
     if "expiration_date" in data:
         try:
             mensaje.expiration_date = datetime.fromisoformat(data["expiration_date"]) if data["expiration_date"] else None
-        except Exception as e:
-            return jsonify({"error": f"Formato de expiration_date inválido: {str(e)}"}), 400
+        except ValueError:
+            return jsonify({"error": "Formato de expiration_date inválido. Usa ISO 8601."}), 400
     # Validar que start_date <= expiration_date
     if mensaje.start_date and mensaje.expiration_date and mensaje.start_date > mensaje.expiration_date:
         return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
