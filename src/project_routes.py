@@ -99,7 +99,14 @@ def delete_proyecto(proyecto_id):
 def mensajes_de_proyecto(pid):
     p = db.session.get(Proyecto, pid)
     return jsonify([
-        {"id": m.id, "nombre": m.nombre, "mensaje": m.mensaje, "estado": m.estado}
+        {
+            "id": m.id,
+            "nombre": m.nombre,
+            "mensaje": m.mensaje,
+            "estado": m.estado,
+            "start_date": m.start_date.isoformat() if m.start_date else None,
+            "expiration_date": m.expiration_date.isoformat() if m.expiration_date else None
+        }
         for m in p.mensajes
     ])
 
@@ -109,14 +116,33 @@ def mensajes_de_proyecto(pid):
 def crear_mensaje(pid):
     p = db.session.get(Proyecto, pid)
     data = request.json
-    if not data or not data.get("mensaje"):
-        return jsonify({"error": "Faltan campos requeridos"}), 400
+    if not data or not data.get("mensaje") or not data.get("nombre"):
+        return jsonify({"error": "Faltan campos requeridos (nombre y mensaje son obligatorios)"}), 400
+
+    start_date = None
+    if data.get("start_date"):
+        try:
+            start_date = datetime.fromisoformat(data["start_date"])
+        except ValueError:
+            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
+
+    expiration_date = None
+    if data.get("expiration_date"):
+        try:
+            expiration_date = datetime.fromisoformat(data["expiration_date"])
+        except ValueError:
+            return jsonify({"error": "Formato de expiration_date inválido. Usa ISO 8601."}), 400
+
+    if start_date and expiration_date and start_date > expiration_date:
+        return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
 
     nuevo = Mensaje(
-        nombre=data["nombre"],
-        mensaje=data["mensaje"],
+        nombre=data.get("nombre"),
+        mensaje=data.get("mensaje"),
         proyecto_id=pid,
-        usuario_id= get_jwt_identity()
+        usuario_id=int(get_jwt_identity()),
+        start_date=start_date,
+        expiration_date=expiration_date
     )
     db.session.add(nuevo)
     db.session.commit()

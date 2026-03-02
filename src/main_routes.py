@@ -55,12 +55,22 @@ def api_crear_mensaje():
     if not data or not data.get("nombre") or not data.get("mensaje"):
         return jsonify({"error": "Faltan campos requeridos"}), 400
 
+    start_date = None
+    if data.get("start_date"):
+        try:
+            start_date = datetime.fromisoformat(data["start_date"])
+        except ValueError:
+            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
+
     expiration_date = None
     if data.get("expiration_date"):
         try:
             expiration_date = datetime.fromisoformat(data["expiration_date"])
         except ValueError:
-            return jsonify({"error": "Formato de fecha inválido. Usa ISO 8601."}), 400
+            return jsonify({"error": "Formato de expiration_date inválido. Usa ISO 8601."}), 400
+
+    if start_date and expiration_date and start_date > expiration_date:
+        return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
 
     nuevo = Mensaje(
         nombre=data["nombre"],
@@ -68,6 +78,7 @@ def api_crear_mensaje():
         usuario_id=int(user_id),
         estado=data.get("estado", "pendiente"),
         proyecto_id=data.get("proyecto_id"),
+        start_date=start_date,
         expiration_date=expiration_date
     )
     if not nuevo.proyecto_id:
@@ -83,6 +94,7 @@ def api_crear_mensaje():
             "nombre": nuevo.nombre,
             "mensaje": nuevo.mensaje,
             "estado": nuevo.estado,
+            "start_date": nuevo.start_date.isoformat() if nuevo.start_date else None,
             "expiration_date": nuevo.expiration_date.isoformat() if nuevo.expiration_date else None
         },
         "autor": user_id
@@ -162,6 +174,11 @@ def actualizar_mensaje(id):
 
     if "estado" in data:
         mensaje.estado = data["estado"]
+    if "start_date" in data:
+        try:
+            mensaje.start_date = datetime.fromisoformat(data["start_date"]) if data["start_date"] else None
+        except ValueError:
+            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
     if "expiration_date" in data:
         try:
             mensaje.expiration_date = datetime.fromisoformat(data["expiration_date"])

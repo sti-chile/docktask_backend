@@ -2,6 +2,31 @@ from . import db
 from datetime import datetime
 
 
+class Workspace(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text, nullable=True)
+    is_shared = db.Column(db.Boolean, default=False, nullable=False)
+    estado = db.Column(db.String(20), nullable=False, default="activo")
+    owner_id = db.Column(db.Integer, db.ForeignKey("usuario.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    owner = db.relationship("Usuario", backref=db.backref("workspaces", lazy="dynamic"))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "nombre": self.nombre,
+            "descripcion": self.descripcion,
+            "is_shared": self.is_shared,
+            "estado": self.estado,
+            "owner_id": self.owner_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 # tabla de unión many‑to‑many Usuario ↔ Proyecto
 usuario_proyecto = db.Table(
     'usuario_proyecto',
@@ -21,6 +46,7 @@ class Mensaje(db.Model):
     estado = db.Column(db.String(20), nullable=False, default='pendiente')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    start_date = db.Column(db.DateTime, nullable=True)
     expiration_date = db.Column(db.DateTime, nullable=True)
 
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
@@ -37,6 +63,7 @@ class Mensaje(db.Model):
             "usuario_id": self.usuario_id,
             "proyecto_id": self.proyecto_id,
             "estado": self.estado,
+            "start_date": self.start_date.isoformat() if self.start_date else None,
             "expiration_date": self.expiration_date.isoformat() if self.expiration_date else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
