@@ -116,8 +116,8 @@ def mensajes_de_proyecto(pid):
 def crear_mensaje(pid):
     p = Proyecto.query.get_or_404(pid)
     data = request.json
-    if not data or not data.get("mensaje"):
-        return jsonify({"error": "Faltan campos requeridos"}), 400
+    if not data or not data.get("mensaje") or not data.get("nombre"):
+        return jsonify({"error": "Faltan campos requeridos (nombre y mensaje son obligatorios)"}), 400
 
     start_date = None
     if data.get("start_date"):
@@ -137,10 +137,10 @@ def crear_mensaje(pid):
         return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
 
     nuevo = Mensaje(
-        nombre=data["nombre"],
-        mensaje=data["mensaje"],
+        nombre=data.get("nombre"),
+        mensaje=data.get("mensaje"),
         proyecto_id=pid,
-        usuario_id=get_jwt_identity(),
+        usuario_id=int(get_jwt_identity()),
         start_date=start_date,
         expiration_date=expiration_date
     )

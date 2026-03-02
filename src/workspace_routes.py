@@ -13,6 +13,9 @@ def create_workspace():
     user_id = int(get_jwt_identity())
     data = request.get_json()
 
+    if not data:
+        return jsonify({"error": "Se esperaba un body JSON válido"}), 400
+
     nombre = data.get("nombre")
     if not nombre:
         return jsonify({"error": "El nombre es obligatorio"}), 400
@@ -45,7 +48,13 @@ def get_workspaces():
 @workspace.route("/<int:id>", methods=["GET"])
 @jwt_required()
 def get_workspace(id):
+    user_id = int(get_jwt_identity())
     ws = Workspace.query.get_or_404(id)
+
+    # Solo el dueño puede ver workspaces privados
+    if ws.owner_id != user_id and not ws.is_shared:
+        return jsonify({"error": "Sin permisos para ver este workspace"}), 403
+
     return jsonify(ws.to_dict()), 200
 
 
@@ -60,6 +69,9 @@ def update_workspace(id):
         return jsonify({"error": "Sin permisos para editar este workspace"}), 403
 
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Se esperaba un body JSON válido"}), 400
+
     ws.nombre = data.get("nombre", ws.nombre)
     ws.descripcion = data.get("descripcion", ws.descripcion)
     ws.is_shared = data.get("is_shared", ws.is_shared)
