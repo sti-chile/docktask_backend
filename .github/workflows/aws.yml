@@ -1,6 +1,7 @@
 name: CI/CD Deploy to EC2
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]    # Puedes cambiar a otra rama si lo prefieres
 
