@@ -155,6 +155,7 @@ def mis_mensajes():
          "created_at": m.created_at.astimezone(timezone.utc).isoformat(), 
          "updated_at": m.updated_at.astimezone(timezone.utc).isoformat(),
          "estado": m.estado,
+         "start_date": m.start_date.isoformat() if m.start_date else None,
          "expiration_date": m.expiration_date.astimezone(timezone.utc).isoformat() if m.expiration_date else None
          }
         for m in mensajes
