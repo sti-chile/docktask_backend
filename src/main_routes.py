@@ -4,6 +4,10 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from .models import Usuario, Mensaje
 from . import db, r
 from datetime import datetime, timezone
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
+
+ph = PasswordHasher()
 
 main = Blueprint("main", __name__)
 
@@ -82,7 +86,7 @@ def api_crear_mensaje():
         expiration_date=expiration_date
     )
     if not nuevo.proyecto_id:
-        return jsonify({"error": "Proyecto no especificado"}), 400
+        return jsonify({"error": "No se puede crear una tarea sin asignarla a un proyecto. Por favor selecciona un proyecto antes de continuar."}), 400
     
     db.session.add(nuevo)
     db.session.commit()
@@ -109,10 +113,24 @@ def login():
     if not username or not password:
         return jsonify({"error": "Faltan credenciales"}), 400
 
-    user = Usuario.query.filter_by(username=username, password=password).first()
+    user = Usuario.query.filter_by(username=username).first()
 
     if not user:
         return jsonify({"error": "Credenciales inválidas"}), 401
+
+    if user.password.startswith("$argon2"):
+        try:
+            ph.verify(user.password, password)
+            if ph.check_needs_rehash(user.password):
+                user.password = ph.hash(password)
+                db.session.commit()
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            return jsonify({"error": "Credenciales inválidas"}), 401
+    else:
+        if user.password != password:
+            return jsonify({"error": "Credenciales inválidas"}), 401
+        user.password = ph.hash(password)
+        db.session.commit()
 
     token = create_access_token(identity=str(user.id))
     return jsonify({

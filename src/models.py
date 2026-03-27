@@ -73,7 +73,7 @@ class Mensaje(db.Model):
 class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     rol = db.Column(db.String(10), nullable=False, default='usuario')
     nombre = db.Column(db.String(50), nullable=True)
     apellido = db.Column(db.String(50), nullable=True)
