@@ -4,6 +4,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import Usuario
 from . import db
 from datetime import datetime, timezone
+from argon2 import PasswordHasher
+
+ph = PasswordHasher()
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 
 # Helper para verificar si el usuario es admin
@@ -40,7 +43,8 @@ def actualizar_usuario(id):
 
     data = request.get_json()
     user.username = data.get("username", user.username)
-    user.password = data.get("password", user.password)
+    new_password = data.get("password")
+    user.password = ph.hash(new_password) if new_password else user.password
     user.rol = data.get("rol", user.rol)
 
     db.session.commit()
@@ -72,7 +76,7 @@ def añadir_usuario():
     data = request.get_json()
     user = Usuario(
         username=data.get("username"),
-        password=data.get("password"),
+        password=ph.hash(data.get("password", "")),
         rol=data.get("rol"),
         nombre=data.get("nombre"),
         apellido=data.get("apellido"),

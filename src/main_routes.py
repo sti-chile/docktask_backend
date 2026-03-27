@@ -114,23 +114,29 @@ def login():
         return jsonify({"error": "Faltan credenciales"}), 400
 
     user = Usuario.query.filter_by(username=username).first()
-
     if not user:
         return jsonify({"error": "Credenciales inválidas"}), 401
 
-    if user.password.startswith("$argon2"):
-        try:
-            ph.verify(user.password, password)
-            if ph.check_needs_rehash(user.password):
-                user.password = ph.hash(password)
-                db.session.commit()
-        except (VerifyMismatchError, VerificationError, InvalidHashError):
-            return jsonify({"error": "Credenciales inválidas"}), 401
-    else:
-        if user.password != password:
-            return jsonify({"error": "Credenciales inválidas"}), 401
-        user.password = ph.hash(password)
-        db.session.commit()
+    # Verificar contraseña (soporta argon2 y migración desde texto plano)
+    authenticated = False
+    try:
+        ph.verify(user.password, password)
+        authenticated = True
+        # Rehash si el algoritmo/parámetros están desactualizados
+        if ph.check_needs_rehash(user.password):
+            user.password = ph.hash(password)
+            db.session.commit()
+    except (VerifyMismatchError, VerificationError):
+        authenticated = False
+    except InvalidHashError:
+        # Migración progresiva: la contraseña aún es texto plano
+        if user.password == password:
+            user.password = ph.hash(password)
+            db.session.commit()
+            authenticated = True
+
+    if not authenticated:
+        return jsonify({"error": "Credenciales inválidas"}), 401
 
     token = create_access_token(identity=str(user.id))
     return jsonify({
@@ -156,7 +162,7 @@ def register():
     if Usuario.query.filter_by(username=username).first():
         return jsonify({"error": "Usuario ya existe"}), 409
 
-    nuevo_usuario = Usuario(username=username, password=password, rol="usuario")
+    nuevo_usuario = Usuario(username=username, password=ph.hash(password), rol="usuario")
     db.session.add(nuevo_usuario)
     db.session.commit()
 
