@@ -76,11 +76,16 @@ def api_crear_mensaje():
     if start_date and expiration_date and start_date > expiration_date:
         return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
 
+    ESTADOS_VALIDOS = {'pendiente', 'en_progreso', 'completado', 'archivado', 'urgente'}
+    estado = data.get("estado", "pendiente")
+    if estado not in ESTADOS_VALIDOS:
+        return jsonify({"error": f"Estado inválido. Valores permitidos: {', '.join(sorted(ESTADOS_VALIDOS))}"}), 400
+
     nuevo = Mensaje(
         nombre=data["nombre"],
         mensaje=data["mensaje"],
         usuario_id=int(user_id),
-        estado=data.get("estado", "pendiente"),
+        estado=estado,
         proyecto_id=data.get("proyecto_id"),
         start_date=start_date,
         expiration_date=expiration_date
@@ -198,6 +203,9 @@ def actualizar_mensaje(id):
     data = request.get_json()
 
     if "estado" in data:
+        ESTADOS_VALIDOS = {'pendiente', 'en_progreso', 'completado', 'archivado', 'urgente'}
+        if data["estado"] not in ESTADOS_VALIDOS:
+            return jsonify({"error": f"Estado inválido. Valores permitidos: {', '.join(sorted(ESTADOS_VALIDOS))}"}), 400
         mensaje.estado = data["estado"]
     if "start_date" in data:
         try:
