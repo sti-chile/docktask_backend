@@ -86,7 +86,7 @@ def api_crear_mensaje():
         expiration_date=expiration_date
     )
     if not nuevo.proyecto_id:
-        return jsonify({"error": "Proyecto no especificado"}), 400
+        return jsonify({"error": "No se puede crear una tarea sin asignarla a un proyecto. Por favor selecciona un proyecto antes de continuar."}), 400
     
     db.session.add(nuevo)
     db.session.commit()
