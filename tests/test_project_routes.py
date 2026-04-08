@@ -2,10 +2,14 @@
 
 import pytest
 from flask import Flask
+from argon2 import PasswordHasher
 from src import db, jwt
 from src.models import Usuario, Proyecto
 from src.project_routes import project
 from src.main_routes import main
+
+ph = PasswordHasher()
+
 
 @pytest.fixture
 def app():
@@ -20,21 +24,24 @@ def app():
     app.register_blueprint(main)
     with app.app_context():
         db.create_all()
-        # Usuario admin para login y autorización
-        user = Usuario(username="test", password="test", rol="admin")
+        # Usuario admin para login y autorización (password hasheado)
+        user = Usuario(username="test", password=ph.hash("test"), rol="admin")
         db.session.add(user)
         db.session.commit()
         yield app
+
 
 @pytest.fixture
 def client(app):
     return app.test_client()
 
+
 def get_token(client):
     # Obtén un JWT real usando el endpoint de login (ajusta si tu login tiene otro prefijo)
     res = client.post("/api/login", json={"username": "test", "password": "test"})
     assert res.status_code == 200
-    return res.get_json()["access_token"]   
+    return res.get_json()["access_token"]
+
 
 def test_crud_proyectos(client):
     token = get_token(client)
@@ -69,4 +76,3 @@ def test_crud_proyectos(client):
     res = client.get("/api/proyectos", headers=headers)
     proyectos = res.get_json()
     assert len(proyectos) == 0
-
