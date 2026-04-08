@@ -4,16 +4,20 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import Proyecto, Mensaje, Usuario, db
 from datetime import datetime, timezone
+
 project = Blueprint("project", __name__, url_prefix="/api")
+
 
 # ---------- helpers ----------
 def is_admin(uid):
     u = db.session.get(Usuario, uid)
     return u and u.rol == "admin"
 
+
 def owner_to_username(uid):
     u = db.session.get(Usuario, uid)
     return u.username if u else ""
+
 
 def proyecto_to_dict(proyecto):
     return {
@@ -24,11 +28,15 @@ def proyecto_to_dict(proyecto):
         "descripcion": proyecto.descripcion,
         "created_at": proyecto.created_at.astimezone(timezone.utc).isoformat(),
         "updated_at": proyecto.updated_at.astimezone(timezone.utc).isoformat(),
-        "end_date": proyecto.end_date.astimezone(timezone.utc).isoformat() if proyecto.end_date else None,
-        "estado": proyecto.estado
+        "end_date": proyecto.end_date.astimezone(timezone.utc).isoformat()
+        if proyecto.end_date
+        else None,
+        "estado": proyecto.estado,
     }
 
+
 # -----------------ENDPOINT GET PROYECTOS-----------------
+
 
 @project.route("/proyectos", methods=["GET"])
 @jwt_required()
@@ -36,13 +44,15 @@ def get_proyectos():
     proyectos = db.session.query(Proyecto).all()
     return jsonify([proyecto_to_dict(p) for p in proyectos]), 200
 
+
 # -----------------ENDPOINT POST PROYECTOS-----------------
+
 
 @project.route("/proyectos", methods=["POST"])
 @jwt_required()
 def create_proyecto():
     data = request.json
-    
+
     if not data or not data.get("nombre") or not data.get("descripcion"):
         return jsonify({"error": "Faltan campos requeridos"}), 400
     end_date = None
@@ -51,28 +61,34 @@ def create_proyecto():
             end_date = datetime.fromisoformat(data["end_date"])
         except ValueError:
             return jsonify({"error": "Formato de fecha inválido. Usa ISO 8601."}), 400
-    
+
     nuevo = Proyecto(
         nombre=data["nombre"],
         descripcion=data["descripcion"],
         owner_id=get_jwt_identity(),
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
-        end_date=end_date
+        end_date=end_date,
     )
     db.session.add(nuevo)
     db.session.commit()
     return jsonify({"message": "Proyecto creado exitosamente"}), 201
 
+
 # -----------------ENDPOINT PUT PROYECTOS-----------------
 @project.route("/proyectos/<int:proyecto_id>", methods=["PUT"])
 @jwt_required()
 def update_proyecto(proyecto_id):
+    user_id = int(get_jwt_identity())
     data = request.json
     proyecto = db.session.get(Proyecto, proyecto_id)
     if not proyecto:
         return jsonify({"error": "Proyecto no encontrado"}), 404
-    
+
+    # Verificar que el usuario sea owner o admin
+    if proyecto.owner_id != user_id and not is_admin(user_id):
+        return jsonify({"error": "No tienes permisos para editar este proyecto"}), 403
+
     proyecto.nombre = data.get("nombre", proyecto.nombre)
     proyecto.descripcion = data.get("descripcion", proyecto.descripcion)
     proyecto.end_date = data.get("end_date", proyecto.end_date)
@@ -80,14 +96,20 @@ def update_proyecto(proyecto_id):
     db.session.commit()
     return jsonify({"message": "Proyecto actualizado exitosamente"}), 200
 
+
 # -----------------ENDPOINT DELETE PROYECTOS-----------------
 @project.route("/proyectos/<int:proyecto_id>", methods=["DELETE"])
 @jwt_required()
 def delete_proyecto(proyecto_id):
+    user_id = int(get_jwt_identity())
     proyecto = db.session.get(Proyecto, proyecto_id)
     if not proyecto:
         return jsonify({"error": "Proyecto no encontrado"}), 404
-    
+
+    # Verificar que el usuario sea owner o admin
+    if proyecto.owner_id != user_id and not is_admin(user_id):
+        return jsonify({"error": "No tienes permisos para eliminar este proyecto"}), 403
+
     db.session.delete(proyecto)
     db.session.commit()
     return jsonify({"message": "Proyecto eliminado exitosamente"}), 200
@@ -98,17 +120,22 @@ def delete_proyecto(proyecto_id):
 @jwt_required()
 def mensajes_de_proyecto(pid):
     p = db.session.get(Proyecto, pid)
-    return jsonify([
-        {
-            "id": m.id,
-            "nombre": m.nombre,
-            "mensaje": m.mensaje,
-            "estado": m.estado,
-            "start_date": m.start_date.isoformat() if m.start_date else None,
-            "expiration_date": m.expiration_date.isoformat() if m.expiration_date else None
-        }
-        for m in p.mensajes
-    ])
+    return jsonify(
+        [
+            {
+                "id": m.id,
+                "nombre": m.nombre,
+                "mensaje": m.mensaje,
+                "estado": m.estado,
+                "start_date": m.start_date.isoformat() if m.start_date else None,
+                "expiration_date": m.expiration_date.isoformat()
+                if m.expiration_date
+                else None,
+            }
+            for m in p.mensajes
+        ]
+    )
+
 
 # --- extra: crear mensaje para un proyecto ---
 @project.route("/proyectos/<int:pid>/mensajes", methods=["POST"])
@@ -117,24 +144,32 @@ def crear_mensaje(pid):
     p = db.session.get(Proyecto, pid)
     data = request.json
     if not data or not data.get("mensaje") or not data.get("nombre"):
-        return jsonify({"error": "Faltan campos requeridos (nombre y mensaje son obligatorios)"}), 400
+        return jsonify(
+            {"error": "Faltan campos requeridos (nombre y mensaje son obligatorios)"}
+        ), 400
 
     start_date = None
     if data.get("start_date"):
         try:
             start_date = datetime.fromisoformat(data["start_date"])
         except ValueError:
-            return jsonify({"error": "Formato de start_date inválido. Usa ISO 8601."}), 400
+            return jsonify(
+                {"error": "Formato de start_date inválido. Usa ISO 8601."}
+            ), 400
 
     expiration_date = None
     if data.get("expiration_date"):
         try:
             expiration_date = datetime.fromisoformat(data["expiration_date"])
         except ValueError:
-            return jsonify({"error": "Formato de expiration_date inválido. Usa ISO 8601."}), 400
+            return jsonify(
+                {"error": "Formato de expiration_date inválido. Usa ISO 8601."}
+            ), 400
 
     if start_date and expiration_date and start_date > expiration_date:
-        return jsonify({"error": "start_date no puede ser mayor que expiration_date"}), 400
+        return jsonify(
+            {"error": "start_date no puede ser mayor que expiration_date"}
+        ), 400
 
     nuevo = Mensaje(
         nombre=data.get("nombre"),
@@ -142,16 +177,8 @@ def crear_mensaje(pid):
         proyecto_id=pid,
         usuario_id=int(get_jwt_identity()),
         start_date=start_date,
-        expiration_date=expiration_date
+        expiration_date=expiration_date,
     )
     db.session.add(nuevo)
     db.session.commit()
     return jsonify({"message": "Mensaje creado exitosamente"}), 201
-
-
-
-    
-
-    
-    
-
