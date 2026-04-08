@@ -44,10 +44,12 @@ def create_app():
     from .admin_routes import admin
     from .project_routes import project
     from .workspace_routes import workspace
+    from .music_routes import music
 
     app.register_blueprint(main)
     app.register_blueprint(admin, url_prefix="/admin")
     app.register_blueprint(project, url_prefix="/api")
     app.register_blueprint(workspace)
+    app.register_blueprint(music)
 
     return app

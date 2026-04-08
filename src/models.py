@@ -144,3 +144,111 @@ class Proyecto(db.Model):
             "end_date": self.end_date.isoformat() if self.end_date else None,
             "estado": self.estado
         }
+
+
+# ============================================================================
+# Módulo de Música
+# ============================================================================
+
+class MusicTrack(db.Model):
+    """Pista de audio MP3 subida por un usuario."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    artist = db.Column(db.String(200), nullable=True)
+    album = db.Column(db.String(200), nullable=True)
+    duration = db.Column(db.Integer, nullable=True)  # segundos
+    s3_key = db.Column(db.String(500), nullable=False, unique=True)  # ruta en bucket S3
+    file_size = db.Column(db.Integer, nullable=False)  # bytes
+    mime_type = db.Column(db.String(50), default='audio/mpeg')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relaciones
+    user = db.relationship('Usuario', backref=db.backref('music_tracks', lazy='dynamic'))
+    playlists = db.relationship('PlaylistTrack', back_populates='track', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "title": self.title,
+            "artist": self.artist,
+            "album": self.album,
+            "duration": self.duration,
+            "file_size": self.file_size,
+            "mime_type": self.mime_type,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "s3_key": self.s3_key,
+        }
+
+
+class Playlist(db.Model):
+    """Playlist de música, puede ser privada o compartida."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False, index=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    is_shared = db.Column(db.Boolean, default=False, nullable=False)  # compartida con otros usuarios
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relaciones
+    user = db.relationship('Usuario', backref=db.backref('playlists', lazy='dynamic'))
+    tracks = db.relationship('PlaylistTrack', back_populates='playlist', cascade='all, delete-orphan')
+    # Colaboradores (si is_shared=True)
+    collaborators = db.relationship('PlaylistCollaborator', back_populates='playlist', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "name": self.name,
+            "description": self.description,
+            "is_shared": self.is_shared,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class PlaylistTrack(db.Model):
+    """Asociación entre playlist y track, con orden."""
+    __tablename__ = 'playlist_track'
+    playlist_id = db.Column(db.Integer, db.ForeignKey('playlist.id'), primary_key=True)
+    track_id = db.Column(db.Integer, db.ForeignKey('music_track.id'), primary_key=True)
+    position = db.Column(db.Integer, nullable=False, default=0)  # orden dentro de la playlist
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    playlist = db.relationship('Playlist', back_populates='tracks')
+    track = db.relationship('MusicTrack', back_populates='playlists')
+
+    def to_dict(self):
+        return {
+            "playlist_id": self.playlist_id,
+            "track_id": self.track_id,
+            "position": self.position,
+            "added_at": self.added_at.isoformat() if self.added_at else None,
+        }
+
+
+class PlaylistCollaborator(db.Model):
+    """Usuarios con acceso a playlist compartida."""
+    __tablename__ = 'playlist_collaborator'
+    playlist_id = db.Column(db.Integer, db.ForeignKey('playlist.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), primary_key=True)
+    permission = db.Column(db.String(10), default='view')  # 'view' o 'edit'
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relaciones
+    playlist = db.relationship('Playlist', back_populates='collaborators')
+    user = db.relationship('Usuario', backref=db.backref('shared_playlists', lazy='dynamic'))
+
+    def to_dict(self):
+        return {
+            "playlist_id": self.playlist_id,
+            "user_id": self.user_id,
+            "permission": self.permission,
+            "added_at": self.added_at.isoformat() if self.added_at else None,
+        }
