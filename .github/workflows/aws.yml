@@ -49,6 +49,17 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.EC2_HOST }}" ]; then echo "ERROR: EC2_HOST secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "ERROR: DATABASE_URL secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "ERROR: JWT_SECRET_KEY secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then echo "ERROR: AWS_REGION secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.AWS_S3_BUCKET }}" ]; then echo "ERROR: AWS_S3_BUCKET secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then echo "ERROR: AWS_ACCESS_KEY_ID secret is missing"; exit 1; fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then echo "ERROR: AWS_SECRET_ACCESS_KEY secret is missing"; exit 1; fi
+          echo "All required secrets are present"
+
       # (Opcional) Copia el archivo .env.example como .env si lo necesitas (puedes adaptar según tu setup)
       # - name: Upload .env to EC2
       #   run: |
