@@ -15,7 +15,7 @@ def is_admin(user_id):
     return user and user.rol == "admin"
 
 # Obtener todos los usuarios
-@admin.route("/api/usuarios", methods=["GET"])
+@admin.route("/usuarios", methods=["GET"])
 @jwt_required()
 def obtener_usuarios():
     user_id = get_jwt_identity()
@@ -30,7 +30,7 @@ def obtener_usuarios():
     return jsonify(data)
 
 # Actualizar usuario
-@admin.route("/api/usuarios/<int:id>", methods=["PUT"])
+@admin.route("/usuarios/<int:id>", methods=["PUT"])
 @jwt_required()
 def actualizar_usuario(id):
     user_id = get_jwt_identity()
@@ -51,7 +51,7 @@ def actualizar_usuario(id):
     return jsonify({"mensaje": "Usuario actualizado"})
 
 # Eliminar usuario
-@admin.route("/api/usuarios/<int:id>", methods=["DELETE"])
+@admin.route("/usuarios/<int:id>", methods=["DELETE"])
 @jwt_required()
 def eliminar_usuario(id):
     user_id = get_jwt_identity()
@@ -67,7 +67,7 @@ def eliminar_usuario(id):
     return jsonify({"mensaje": "Usuario eliminado"})
 
 # Añadir usuario
-@admin.route("/api/usuarios", methods=["POST"])
+@admin.route("/usuarios", methods=["POST"])
 @jwt_required()
 def añadir_usuario():
     user_id = get_jwt_identity()

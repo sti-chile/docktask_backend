@@ -3,7 +3,7 @@ from datetime import datetime
 from .models import db, Workspace
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-workspace = Blueprint("workspace", __name__, url_prefix="/api/workspaces")
+workspace = Blueprint("workspace", __name__, url_prefix="/workspaces")
 
 
 # 🔹 Crear un nuevo workspace

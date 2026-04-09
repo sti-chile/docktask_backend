@@ -17,6 +17,7 @@ from src.models import (
 )
 from src.music_routes import music
 from src.main_routes import main
+from src.api_v1_routes import api_v1
 from argon2 import PasswordHasher
 
 
@@ -33,6 +34,7 @@ def app():
     jwt.init_app(app)
     app.register_blueprint(music)
     app.register_blueprint(main)
+    app.register_blueprint(api_v1, url_prefix="/api/v1")
 
     with app.app_context():
         db.create_all()
@@ -58,7 +60,7 @@ def client(app):
 
 def get_token(client, username="testuser", password="testpass"):
     """Obtiene JWT token para autenticación."""
-    res = client.post("/api/login", json={"username": username, "password": password})
+    res = client.post("/api/v1/login", json={"username": username, "password": password})
     assert res.status_code == 200, f"Login failed: {res.data}"
     return res.get_json()["access_token"]
 

@@ -6,7 +6,7 @@ from argon2 import PasswordHasher
 from src import db, jwt
 from src.models import Usuario, Proyecto
 from src.project_routes import project
-from src.main_routes import main
+from src.api_v1_routes import api_v1
 
 ph = PasswordHasher()
 
@@ -20,8 +20,8 @@ def app():
     app.config["JWT_SECRET_KEY"] = "testsecret"
     db.init_app(app)
     jwt.init_app(app)
-    app.register_blueprint(project)
-    app.register_blueprint(main)
+    app.register_blueprint(project, url_prefix="/api")
+    app.register_blueprint(api_v1, url_prefix="/api/v1")
     with app.app_context():
         db.create_all()
         # Usuario admin para login y autorización (password hasheado)
@@ -38,7 +38,7 @@ def client(app):
 
 def get_token(client):
     # Obtén un JWT real usando el endpoint de login (ajusta si tu login tiene otro prefijo)
-    res = client.post("/api/login", json={"username": "test", "password": "test"})
+    res = client.post("/api/v1/login", json={"username": "test", "password": "test"})
     assert res.status_code == 200
     return res.get_json()["access_token"]
 

@@ -45,11 +45,21 @@ def create_app():
     from .project_routes import project
     from .workspace_routes import workspace
     from .music_routes import music
+    from .api_v1_routes import api_v1
 
     app.register_blueprint(main)
-    app.register_blueprint(admin, url_prefix="/admin")
-    app.register_blueprint(project, url_prefix="/api")
-    app.register_blueprint(workspace)
-    app.register_blueprint(music, url_prefix="/api/v1/music")
+    
+    # Registrar blueprints bajo /api/v1
+    app.register_blueprint(admin, url_prefix="/api/v1", name="admin_v1")
+    app.register_blueprint(project, url_prefix="/api/v1", name="project_v1")
+    app.register_blueprint(workspace, url_prefix="/api/v1", name="workspace_v1")
+    app.register_blueprint(music)  # ya tiene url_prefix="/api/v1/music"
+    app.register_blueprint(api_v1, url_prefix="/api/v1", name="api_v1")
+    
+    # Registrar blueprints bajo /api (compatibilidad)
+    app.register_blueprint(admin, url_prefix="/api", name="admin_legacy")
+    app.register_blueprint(project, url_prefix="/api", name="project_legacy")
+    app.register_blueprint(workspace, url_prefix="/api", name="workspace_legacy")
+    app.register_blueprint(api_v1, url_prefix="/api", name="api_legacy")
 
     return app

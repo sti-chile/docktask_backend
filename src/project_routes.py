@@ -5,7 +5,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from .models import Proyecto, Mensaje, Usuario, db
 from datetime import datetime, timezone
 
-project = Blueprint("project", __name__, url_prefix="/api")
+project = Blueprint("project", __name__, url_prefix="/proyectos")
 
 
 # ---------- helpers ----------
