@@ -25,11 +25,12 @@ def get_current_user_id() -> int:
     return int(get_jwt_identity())
 
 
-# Configuración S3
+# Configuración S3 y CloudFront
 AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 AWS_S3_BUCKET = os.getenv("AWS_S3_BUCKET", "docktask-media")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+CLOUDFRONT_DOMAIN = os.getenv("CLOUDFRONT_DOMAIN", "d3ys3fjzs95hj.cloudfront.net")
 
 
 # Cliente S3 (se crea bajo demanda para no sobrecargar si no se usa)
@@ -91,7 +92,7 @@ def get_track(track_id):
 @music.route("/tracks/<int:track_id>/stream", methods=["GET"])
 @jwt_required()
 def stream_track(track_id):
-    """Genera una pre‑signed URL temporal para streaming del archivo MP3 desde S3."""
+    """Devuelve URL de CloudFront para streaming del archivo MP3."""
     current_user_id = get_current_user_id()
     track = MusicTrack.query.get_or_404(track_id)
 
@@ -110,20 +111,9 @@ def stream_track(track_id):
         if not shared:
             return jsonify({"error": "No autorizado"}), 403
 
-    try:
-        s3_client = get_s3_client()
-        url = s3_client.generate_presigned_url(
-            ClientMethod="get_object",
-            Params={
-                "Bucket": AWS_S3_BUCKET,
-                "Key": track.s3_key,
-                "ResponseContentType": track.mime_type,
-            },
-            ExpiresIn=3600,  # 1 hora
-        )
-        return jsonify({"stream_url": url})
-    except ClientError as e:
-        return jsonify({"error": str(e)}), 500
+    # Usar CloudFront en vez de S3 presigned URL
+    stream_url = f"https://{CLOUDFRONT_DOMAIN}/{track.s3_key}"
+    return jsonify({"stream_url": stream_url})
 
 
 @music.route("/tracks/upload", methods=["POST"])
@@ -446,5 +436,6 @@ def music_config():
             "allowed_mime_types": ["audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg"],
             "bucket": AWS_S3_BUCKET,
             "region": AWS_REGION,
+            "cdn_domain": CLOUDFRONT_DOMAIN,
         }
     )
