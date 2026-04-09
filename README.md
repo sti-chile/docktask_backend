@@ -112,6 +112,7 @@ Analista Programador TI – experiencia en backend, despliegue, monitoreo (Zabbi
 - Revisa la documentación y scripts en `src/` para detalles avanzados.
 
 ---
+K
 
 ## 🚧 Roadmap
 
