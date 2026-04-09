@@ -68,7 +68,8 @@ jobs:
             echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
             echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose down || true
             docker compose build --no-cache
             docker compose up -d
