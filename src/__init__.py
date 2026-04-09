@@ -31,6 +31,12 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # Pool de conexiones: verificar conexión antes de usar (evita error en primer request)
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,  # Reciclar conexiones cada 5 minutos
+    }
+
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
