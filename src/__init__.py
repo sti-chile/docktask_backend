@@ -50,6 +50,6 @@ def create_app():
     app.register_blueprint(admin, url_prefix="/admin")
     app.register_blueprint(project, url_prefix="/api")
     app.register_blueprint(workspace)
-    app.register_blueprint(music)
+    app.register_blueprint(music, url_prefix="/api/v1/music")
 
     return app
