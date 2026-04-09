@@ -3,11 +3,11 @@ from datetime import datetime
 from .models import db, Workspace
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-workspace = Blueprint("workspace", __name__, url_prefix="/workspaces")
+workspace = Blueprint("workspace", __name__)
 
 
 # 🔹 Crear un nuevo workspace
-@workspace.route("/", methods=["POST"])
+@workspace.route("/workspaces/", methods=["POST"])
 @jwt_required()
 def create_workspace():
     user_id = int(get_jwt_identity())
@@ -32,20 +32,19 @@ def create_workspace():
 
 
 # 🔹 Listar workspaces propios + compartidos
-@workspace.route("/", methods=["GET"])
+@workspace.route("/workspaces/", methods=["GET"])
 @jwt_required()
 def get_workspaces():
     user_id = int(get_jwt_identity())
     propios = Workspace.query.filter_by(owner_id=user_id).all()
     compartidos = Workspace.query.filter(
-        Workspace.is_shared == True,
-        Workspace.owner_id != user_id
+        Workspace.is_shared == True, Workspace.owner_id != user_id
     ).all()
     return jsonify([w.to_dict() for w in propios + compartidos]), 200
 
 
 # 🔹 Obtener un workspace específico
-@workspace.route("/<int:id>", methods=["GET"])
+@workspace.route("/workspaces/<int:id>", methods=["GET"])
 @jwt_required()
 def get_workspace(id):
     user_id = int(get_jwt_identity())
@@ -59,7 +58,7 @@ def get_workspace(id):
 
 
 # 🔹 Actualizar un workspace (solo el dueño)
-@workspace.route("/<int:id>", methods=["PUT"])
+@workspace.route("/workspaces/<int:id>", methods=["PUT"])
 @jwt_required()
 def update_workspace(id):
     user_id = int(get_jwt_identity())
@@ -83,7 +82,7 @@ def update_workspace(id):
 
 
 # 🔹 Eliminar un workspace (solo el dueño)
-@workspace.route("/<int:id>", methods=["DELETE"])
+@workspace.route("/workspaces/<int:id>", methods=["DELETE"])
 @jwt_required()
 def delete_workspace(id):
     user_id = int(get_jwt_identity())

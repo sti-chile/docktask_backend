@@ -7,15 +7,17 @@ from datetime import datetime, timezone
 from argon2 import PasswordHasher
 
 ph = PasswordHasher()
-admin = Blueprint("admin", __name__, url_prefix="/admin")
+admin = Blueprint("admin", __name__)
+
 
 # Helper para verificar si el usuario es admin
 def is_admin(user_id):
     user = db.session.get(Usuario, user_id)
     return user and user.rol == "admin"
 
+
 # Obtener todos los usuarios
-@admin.route("/usuarios", methods=["GET"])
+@admin.route("/admin/usuarios", methods=["GET"])
 @jwt_required()
 def obtener_usuarios():
     user_id = get_jwt_identity()
@@ -23,14 +25,12 @@ def obtener_usuarios():
         return jsonify({"error": "Acceso denegado"}), 403
 
     usuarios = db.session.query(Usuario).all()
-    data = [
-        {"id": u.id, "username": u.username, "rol": u.rol}
-        for u in usuarios
-    ]
+    data = [{"id": u.id, "username": u.username, "rol": u.rol} for u in usuarios]
     return jsonify(data)
 
+
 # Actualizar usuario
-@admin.route("/usuarios/<int:id>", methods=["PUT"])
+@admin.route("/admin/usuarios/<int:id>", methods=["PUT"])
 @jwt_required()
 def actualizar_usuario(id):
     user_id = get_jwt_identity()
@@ -38,7 +38,7 @@ def actualizar_usuario(id):
         return jsonify({"error": "Acceso denegado"}), 403
 
     user = db.session.get(Usuario, id)
-    if not user:            
+    if not user:
         return jsonify({"error": "Usuario no encontrado"}), 404
 
     data = request.get_json()
@@ -50,8 +50,9 @@ def actualizar_usuario(id):
     db.session.commit()
     return jsonify({"mensaje": "Usuario actualizado"})
 
+
 # Eliminar usuario
-@admin.route("/usuarios/<int:id>", methods=["DELETE"])
+@admin.route("/admin/usuarios/<int:id>", methods=["DELETE"])
 @jwt_required()
 def eliminar_usuario(id):
     user_id = get_jwt_identity()
@@ -66,8 +67,9 @@ def eliminar_usuario(id):
     db.session.commit()
     return jsonify({"mensaje": "Usuario eliminado"})
 
+
 # Añadir usuario
-@admin.route("/usuarios", methods=["POST"])
+@admin.route("/admin/usuarios", methods=["POST"])
 @jwt_required()
 def añadir_usuario():
     user_id = get_jwt_identity()
@@ -81,7 +83,7 @@ def añadir_usuario():
         nombre=data.get("nombre"),
         apellido=data.get("apellido"),
         created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc)
+        updated_at=datetime.now(timezone.utc),
     )
     db.session.add(user)
     db.session.commit()
