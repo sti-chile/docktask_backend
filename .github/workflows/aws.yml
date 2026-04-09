@@ -55,10 +55,13 @@ jobs:
           if [ -z "${{ secrets.DATABASE_URL }}" ]; then echo "ERROR: DATABASE_URL secret is missing"; exit 1; fi
           if [ -z "${{ secrets.JWT_SECRET_KEY }}" ]; then echo "ERROR: JWT_SECRET_KEY secret is missing"; exit 1; fi
           if [ -z "${{ secrets.AWS_REGION }}" ]; then echo "ERROR: AWS_REGION secret is missing"; exit 1; fi
-          if [ -z "${{ secrets.AWS_S3_BUCKET }}" ]; then echo "ERROR: AWS_S3_BUCKET secret is missing"; exit 1; fi
           if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then echo "ERROR: AWS_ACCESS_KEY_ID secret is missing"; exit 1; fi
           if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then echo "ERROR: AWS_SECRET_ACCESS_KEY secret is missing"; exit 1; fi
           echo "All required secrets are present"
+          # AWS_S3_BUCKET es opcional; si falta se usará valor por defecto
+          if [ -z "${{ secrets.AWS_S3_BUCKET }}" ]; then
+            echo "WARNING: AWS_S3_BUCKET secret is missing, using default 'docktask-media'"
+          fi
 
       # (Opcional) Copia el archivo .env.example como .env si lo necesitas (puedes adaptar según tu setup)
       # - name: Upload .env to EC2
@@ -76,7 +79,12 @@ jobs:
             echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
             echo "CORS_ORIGINS=https://www.docktask.app,https://docktask.app" >> .env
             echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-            echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+            # AWS_S3_BUCKET puede no estar definido; usar valor por defecto
+            if [ -n "${{ secrets.AWS_S3_BUCKET }}" ]; then
+              echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+            else
+              echo "AWS_S3_BUCKET=docktask-media" >> .env
+            fi
             echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
             git fetch origin main
